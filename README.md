@@ -9,5 +9,5 @@ simple twitch chat overlay
 - ignore list
 
 ## Configuration:
-- open `config.js` and follow the instructions
+- open `config.js` in text editor and follow the instructions
 - add `index.html` as a local file in OBS
