@@ -7,8 +7,15 @@ const ignoreList = config.chat.ignoreList.map(name => name.toLowerCase());
 const newMessageSound = new Audio(config.chat.soundPath);
 newMessageSound.volume = config.chat.soundVolume;
 
+function playMessageSound() {
+    if (config.chat.soundVolume === 0) return;
+    newMessageSound.currentTime = 0;
+    newMessageSound.play().catch(() => {});
+}
+
 const chatContainer = document.getElementById('chat-container');
 let sevenTVEmotes = new Map();
+let emoteRefreshInterval = null;
 
 const CACHE_KEY = '7tv_emotes_cache';
 const CACHE_DURATION = config.emotes.cacheDurationHours * 60 * 60 * 1000;
@@ -24,27 +31,42 @@ function preloadEmoteImages() {
     console.log('emote image pre-loading initiated.');
 }
 
-async function fetch7TVEmotes() {
-    const cachedData = localStorage.getItem(CACHE_KEY);
-    if (cachedData) {
-        const { timestamp, emotes } = JSON.parse(cachedData);
-        if (Date.now() - timestamp < CACHE_DURATION) {
+function loadEmotesFromCache() {
+    try {
+        const cachedData = localStorage.getItem(CACHE_KEY);
+        if (cachedData) {
+            const { timestamp, emotes } = JSON.parse(cachedData);
+            const isExpired = Date.now() - timestamp >= CACHE_DURATION;
             sevenTVEmotes = new Map(emotes);
-            console.log(`loaded ${sevenTVEmotes.size} 7TV emotes from cache`);
+            console.log(`loaded ${sevenTVEmotes.size} 7TV emotes from cache${isExpired ? ' (expired)' : ''}`);
             preloadEmoteImages();
-            return;
+            return !isExpired;
         }
+    } catch (error) {
+        console.error('failed to load emotes from cache:', error);
+        localStorage.removeItem(CACHE_KEY);
+    }
+    return false;
+}
+
+async function fetch7TVEmotes() {
+    if (loadEmotesFromCache()) {
+        return;
     }
 
     try {
         const response = await fetch(`https://7tv.io/v3/users/twitch/${twitchUserId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
         const apiData = await response.json();
         if (apiData.emote_set && apiData.emote_set.emotes) {
             const newEmotes = new Map();
             apiData.emote_set.emotes.forEach(emote => {
                 const emoteData = emote.data;
+                if (!emoteData) return;
                 const host = emoteData.host;
-                
+
                 const urls = {};
                 if (host && host.files) {
                     host.files.forEach(file => {
@@ -54,7 +76,7 @@ async function fetch7TVEmotes() {
                         }
                     });
                 }
-                
+
                 newEmotes.set(emoteData.name, {
                     id: emoteData.id,
                     name: emoteData.name,
@@ -116,9 +138,8 @@ function parseMessageWithEmotes(message, twitchEmotes) {
                     name: word,
                     urls: emote.urls
                 });
+                searchIndex = wordStart + word.length;
             }
-            
-            searchIndex = wordStart + word.length;
         } else {
             const wordStart = message.indexOf(word, searchIndex);
             if (wordStart !== -1) {
@@ -141,7 +162,7 @@ function parseMessageWithEmotes(message, twitchEmotes) {
         if (emote.type === 'twitch') {
             img.src = `https://static-cdn.jtvnw.net/emoticons/v2/${emote.id}/default/dark/1.0`;
         } else if (emote.type === '7tv') {
-            img.src = emote.urls['1x'] || emote.urls['1x'];
+            img.src = emote.urls['1x'] || emote.urls['2x'] || emote.urls['3x'] || '';
         }
         
         fragment.appendChild(img);
@@ -166,45 +187,121 @@ function initialize() {
     fetch7TVEmotes();
 }
 
-client.on('message', (channel, tags, message, self) => {
-    if (self) return;
-
-    if (ignoreList.includes(tags['display-name'].toLowerCase())) {
-        return;
+function getElementPositions() {
+    const positions = new Map();
+    for (const child of chatContainer.children) {
+        positions.set(child, child.getBoundingClientRect().top);
     }
+    return positions;
+}
 
-    newMessageSound.play().catch(error => {
-        console.error("could not play sound:", error);
-    });
+function animateMessages(oldPositions, newElement, removingElement) {
+    for (const child of chatContainer.children) {
+        if (child === newElement) continue;
 
+        const oldTop = oldPositions.get(child);
+        if (oldTop === undefined) continue;
+
+        const newTop = child.getBoundingClientRect().top;
+        const deltaY = oldTop - newTop;
+
+        if (child === removingElement) {
+            child.style.transition = 'none';
+            child.style.transform = `translateY(${deltaY}px)`;
+            child.style.opacity = '1';
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    child.style.transition = '';
+                    child.style.transform = 'translateY(-40px)';
+                    child.style.opacity = '0';
+                });
+            });
+        } else if (Math.abs(deltaY) > 0.5) {
+            child.style.transition = 'none';
+            child.style.transform = `translateY(${deltaY}px)`;
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    child.style.transition = '';
+                    child.style.transform = '';
+                });
+            });
+        }
+    }
+}
+
+function isValidColor(color) {
+    return color && /^#[0-9A-Fa-f]{3,6}$/.test(color);
+}
+
+function addMessage(displayName, color, message, emotes) {
+    const oldPositions = getElementPositions();
+
+    let removingElement = null;
     if (chatContainer.children.length >= maxMessages) {
-        const oldestMessage = chatContainer.firstChild;
-        oldestMessage.classList.add('disappearing-message');
-        oldestMessage.addEventListener('animationend', () => oldestMessage.remove(), { once: true });
+        removingElement = chatContainer.firstChild;
     }
 
     const messageElement = document.createElement('div');
-    messageElement.classList.add('chat-message', 'new-message-animation');
+    messageElement.classList.add('chat-message', 'entering');
 
     const usernameSpan = document.createElement('span');
     usernameSpan.classList.add('username');
-    usernameSpan.style.color = tags['color'] || config.style.defaultUsernameColor;
-    usernameSpan.textContent = tags['display-name'];
+    usernameSpan.style.color = isValidColor(color) ? color : config.style.defaultUsernameColor;
+    usernameSpan.textContent = displayName;
     messageElement.appendChild(usernameSpan);
 
     const messageContent = document.createElement('span');
-    messageContent.appendChild(document.createTextNode(': ')); 
-    messageContent.appendChild(parseMessageWithEmotes(message, tags.emotes));
+    messageContent.appendChild(document.createTextNode(': '));
+    messageContent.appendChild(parseMessageWithEmotes(message, emotes));
     messageElement.appendChild(messageContent);
 
     chatContainer.appendChild(messageElement);
 
-    messageElement.addEventListener('animationend', () => {
-        messageElement.classList.remove('new-message-animation');
-    }, { once: true });
+    if (removingElement) {
+        setTimeout(() => {
+            if (removingElement.parentNode) {
+                removingElement.remove();
+            }
+        }, 400);
+    }
+
+    animateMessages(oldPositions, messageElement, removingElement);
+
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            messageElement.classList.remove('entering');
+        });
+    });
+}
+
+client.on('message', (channel, tags, message, self) => {
+    if (self) return;
+    if (!message || !message.trim()) return;
+
+    const displayName = tags['display-name'] || tags.username || 'Anonymous';
+    if (ignoreList.includes(displayName.toLowerCase())) {
+        return;
+    }
+
+    playMessageSound();
+    addMessage(displayName, tags.color, message, tags.emotes);
 });
 
-// refresh 7TV emotes
-setInterval(fetch7TVEmotes, config.emotes.refreshIntervalMinutes * 60 * 1000);
+client.on('connected', (address, port) => {
+    console.log(`connected to Twitch: ${address}:${port}`);
+    if (!emoteRefreshInterval) {
+        emoteRefreshInterval = setInterval(fetch7TVEmotes, config.emotes.refreshIntervalMinutes * 60 * 1000);
+    }
+});
+
+client.on('disconnected', (reason) => {
+    console.log('disconnected from Twitch:', reason);
+    if (emoteRefreshInterval) {
+        clearInterval(emoteRefreshInterval);
+        emoteRefreshInterval = null;
+    }
+});
 
 initialize();

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>test</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { background-color: #0a0a0a; }
+        #test-controls {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            background: #0d0d0d;
+            border: 1px solid #333;
+            padding: 12px 16px;
+            z-index: 1000;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            color: #888;
+            min-width: 200px;
+        }
+        #test-controls .header {
+            color: #555;
+            border-bottom: 1px solid #222;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+        #test-controls .cmd {
+            padding: 6px 0;
+            cursor: pointer;
+            transition: color 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #test-controls .cmd:hover { color: #fff; }
+        #test-controls .cmd:active { color: #0f0; }
+        #test-controls .key {
+            color: #0a0;
+            font-size: 11px;
+            min-width: 18px;
+        }
+        #test-controls .cmd:hover .key { color: #0f0; }
+        #test-controls input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #333;
+            color: #aaa;
+            font-family: inherit;
+            font-size: 13px;
+            padding: 6px 0;
+            width: 100%;
+            outline: none;
+            margin-bottom: 8px;
+        }
+        #test-controls input:focus {
+            border-color: #0a0;
+            color: #fff;
+        }
+        #test-controls input::placeholder { color: #444; }
+        #test-controls .sep {
+            border-top: 1px solid #1a1a1a;
+            margin: 6px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="test-controls">
+        <div class="header">EvilAssTwitchChatOverlay test</div>
+        <input type="text" id="test-message" placeholder="> enter message..." value="Hello chat!">
+        <div class="cmd" onclick="sendTestMessage()"><span class="key">1</span> send message</div>
+        <div class="cmd" onclick="sendRandomMessage()"><span class="key">2</span> random message</div>
+        <div class="sep"></div>
+        <div class="cmd" onclick="startAutoMessages()"><span class="key">3</span> auto mode</div>
+        <div class="cmd" onclick="stopAutoMessages()"><span class="key">4</span> stop</div>
+        <div class="sep"></div>
+        <div class="cmd" onclick="sendSpam()"><span class="key">5</span> spam x5</div>
+    </div>
+
+    <div id="chat-container"></div>
+
+    <script src="config.js"></script>
+    <script>
+        const tmi = {
+            Client: function() {
+                return {
+                    connect: () => Promise.resolve(),
+                    on: () => {}
+                };
+            }
+        };
+    </script>
+    <script src="script.js"></script>
+    <script>
+        const testUsers = [
+            { name: 'xQc', color: '#B00B' },
+            { name: 'kven228', color: '#1488' },
+            { name: 'MaximilianMus', color: '#ffffff' },
+            { name: 'ehchobyah', color: '#0012ed' },
+            { name: 'Kaktoos_', color: '#ffd700' },
+            { name: 'HoneyMad', color: '#9400d3' },
+            { name: 'yoj___', color: '#00ced1' },
+            { name: 'SKIBIDIkeekysRIZZLER', color: '#f67' },
+        ];
+
+        const testMessages = [
+            'keekSmash',
+            'DIESOFCRINGE',
+            'kok ahuel',
+            'Shiza',
+            'hi nigjga help me',
+            'hey grok is this true?',
+            'is this ur mom? LOL',
+            'фовфыврфлоырвфыолврфыловрло',
+            'ajsdhkjashdkjasdhajkshdakjshdajksdhakjsdh',
+        ];
+
+        let autoInterval = null;
+
+        function getRandomUser() {
+            return testUsers[Math.floor(Math.random() * testUsers.length)];
+        }
+
+        function getRandomMessage() {
+            return testMessages[Math.floor(Math.random() * testMessages.length)];
+        }
+
+        function sendTestMessage() {
+            const user = getRandomUser();
+            const message = document.getElementById('test-message').value || 'test';
+            addMessage(user.name, user.color, message, null);
+            playMessageSound();
+        }
+
+        function sendRandomMessage() {
+            const user = getRandomUser();
+            const message = getRandomMessage();
+            addMessage(user.name, user.color, message, null);
+            playMessageSound();
+        }
+
+        function startAutoMessages() {
+            stopAutoMessages();
+            autoInterval = setInterval(sendRandomMessage, 1000);
+        }
+
+        function stopAutoMessages() {
+            if (autoInterval) {
+                clearInterval(autoInterval);
+                autoInterval = null;
+            }
+        }
+
+        function sendSpam() {
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => sendRandomMessage(), i * 150);
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT') return;
+            switch(e.key) {
+                case '1': sendTestMessage(); break;
+                case '2': sendRandomMessage(); break;
+                case '3': startAutoMessages(); break;
+                case '4': stopAutoMessages(); break;
+                case '5': sendSpam(); break;
+            }
+        });
+    </script>
+</body>
+</html>
