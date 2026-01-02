@@ -6,6 +6,7 @@ simple twitch chat overlay
 ## Features:
 - twitch and 7TV emotes support
 - emotes caching
+- basic badges
 - ignore list
 
 ## Configuration:

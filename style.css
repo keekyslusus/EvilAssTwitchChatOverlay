@@ -48,6 +48,12 @@ body {
     margin: -0.2em 2px 0;
 }
 
+.chat-badge {
+    height: 1.1em;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
 .chat-message.entering {
     opacity: 0;
     transform: translateY(30px);

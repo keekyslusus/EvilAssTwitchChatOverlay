@@ -96,14 +96,14 @@
     <script src="script.js"></script>
     <script>
         const testUsers = [
-            { name: 'xQc', color: '#B00B' },
-            { name: 'kven228', color: '#1488' },
-            { name: 'MaximilianMus', color: '#ffffff' },
-            { name: 'ehchobyah', color: '#0012ed' },
-            { name: 'Kaktoos_', color: '#ffd700' },
-            { name: 'HoneyMad', color: '#9400d3' },
-            { name: 'yoj___', color: '#00ced1' },
-            { name: 'SKIBIDIkeekysRIZZLER', color: '#f67' },
+            { name: 'xQc', color: '#B00B', badges: { partner: '1' } },
+            { name: 'kven228', color: '#1488', badges: { moderator: '1' } },
+            { name: 'MaximilianMus', color: '#ffffff', badges: { vip: '1' } },
+            { name: 'ehchobyah', color: '#0012ed', badges: {} },
+            { name: 'Kaktoos_', color: '#ffd700', badges: { moderator: '1', premium: '1' } },
+            { name: 'HoneyMad', color: '#9400d3', badges: { partner: '1' } },
+            { name: 'yoj___', color: '#00ced1', badges: {} },
+            { name: 'SKIBIDIkeekysRIZZLER', color: '#f67', badges: { broadcaster: '1' } },
         ];
 
         const testMessages = [
@@ -114,8 +114,16 @@
             'hi nigjga help me',
             'hey grok is this true?',
             'is this ur mom? LOL',
-            'фовфыврфлоырвфыолврфыловрло',
-            'ajsdhkjashdkjasdhajkshdakjshdajksdhakjsdh',
+            'did you see that? O_O',
+            'enjoy the rising price of life u already cant afford drug',
+            'could the mongolian army stop prime Haru Urara? sisyphus',
+            'moid moid go away grape my life another day agaDespair',
+            'tell me a halal way to die faster ITSOVER',
+            'Adolf (He/Tler) Socialist, Vegan, #AJAB uuh',
+            'I died at Epsteins Island and Reincarnated as a 200 y.o little girl ',
+            'hey men and the are pigs xdd',
+            '@grok now make her wear less clothes',
+            'how c++ ninjas look at u when their 6000000 line program runs 0.00676967 secs faster that ur 2 line python script soySmug',
         ];
 
         let autoInterval = null;
@@ -131,14 +139,14 @@
         function sendTestMessage() {
             const user = getRandomUser();
             const message = document.getElementById('test-message').value || 'test';
-            addMessage(user.name, user.color, message, null);
+            addMessage(user.name, user.color, message, null, user.badges);
             playMessageSound();
         }
 
         function sendRandomMessage() {
             const user = getRandomUser();
             const message = getRandomMessage();
-            addMessage(user.name, user.color, message, null);
+            addMessage(user.name, user.color, message, null, user.badges);
             playMessageSound();
         }
 
