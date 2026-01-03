@@ -1,11 +1,7 @@
-// https://dev.twitch.tv/console/apps/create
-// OAuth redirect: http://localhost:3000
-// client type: Confidential
 const config = {
   twitch: {
     channelName: 'USERNAME', // twitch nickname
-    oauthToken: 'CLIENT_SECRET', //client secret
-    twitchUserId: 'TWITCH_USER_ID', // https://www.streamweasels.com/tools/convert-twitch-username-%20to-user-id/
+    twitchUserId: 'TWITCH_USER_ID', // https://www.streamweasels.com/tools/convert-twitch-username-to-user-id/
   },
   chat: {
     maxMessages: 5,
